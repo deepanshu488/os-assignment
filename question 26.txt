@@ -1,0 +1,54 @@
+#include<stdio.h>
+#include<sys/types.h>
+#include<sys/stat.h>
+#include<fcntl.h>
+#include<string.h>
+#include<stdlib.h>
+#include<unistd.h>
+#include <sys/wait.h>
+#define size 50
+
+int main(int arguments, char* a[]) 
+{
+    int files[2];
+    pid_t cid;
+    char buffer[size];
+    pipe(files);
+    if( arguments != 3 ) 
+    {
+        printf("ERROR:  2 parameters required.\n");
+        exit(1);
+    }
+    int filesOpen = open(a[1], 0);
+    int TargetFiles = open(a[2], O_RDWR|O_CREAT|O_APPEND, 0666);
+    if (filesOpen == -1 || TargetFiles == -1) 
+    {
+        printf("Files can not be opend\n");
+        exit(1);
+    }
+    cid = fork();
+    if (cid == 0) 
+    {
+        close(files[1]);
+	while (read(files[0], buffer, sizeof(buffer)) > 0) 
+	{
+		write(TargetFiles, buffer, strlen(buffer) - 1);
+        }
+        close(files[0]);
+        close(TargetFiles);
+    }
+    else 
+    {
+        close(files[0]);
+	while (read(filesOpen, buffer, sizeof(buffer)) > 0) 
+	{
+            write(files[1], buffer, sizeof(buffer));
+            memset(buffer, 0, size);
+        }
+        close(files[1]);
+        close(filesOpen);
+        wait(NULL);
+    }
+}
+
+
